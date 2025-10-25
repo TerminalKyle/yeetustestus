@@ -1,0 +1,12 @@
+{
+   "name": "TokenLogin",
+   "version": "1.0.5",
+   "description": "Login to Discord using a token.",
+   "color": "#64D3FF",
+   "authors": [
+      {
+         "name": "kyle",
+         "id": "1278523345498800130"
+      }
+   ]
+}
