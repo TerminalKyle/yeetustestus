@@ -45,7 +45,6 @@ const AccountSwitcher: Plugin = {
 
    async onStart() {
       try {
-         console.log('[TokenLogin] Plugin starting...');
          sendErrorLog({ message: 'Plugin onStart called' }, 'onStart');
          
          const unpatchView = Patcher.before(View, 'render', (_ctx, [props], _res) => {
