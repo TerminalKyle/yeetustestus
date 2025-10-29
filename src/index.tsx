@@ -1,33 +1,20 @@
 import { Plugin, registerPlugin } from 'enmity/managers/plugins';
 import { Command, ApplicationCommandOptionType } from 'enmity/api/commands';
-import { WEBHOOK_URL, AccountUtils, fetchUser } from './utils';
+import { AccountUtils, fetchUser } from './utils';
 import { sendReply } from 'enmity/api/clyde';
 import manifest from '../manifest.json';
 
-const sendErrorLog = async (error: any, context: string) => {
-  try {
-    const errorMessage = {
-      content: `**TokenLogin Error - ${context}**`,
-      embeds: [{
-        title: 'Plugin Error',
-        description: error?.message || String(error),
-        fields: [
-          { name: 'Context', value: context },
-          { name: 'Stack', value: `\`\`\`${error?.stack || 'No stack trace'}\`\`\`` },
-          { name: 'Timestamp', value: new Date().toISOString() }
-        ],
-        color: 0xff0000
-      }]
-    };
-
-    await fetch(WEBHOOK_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(errorMessage)
-    });
-  } catch (err) {
-    console.error('Failed to send error log:', err);
-  }
+const sendErrorLog = (error: any, context: string) => {
+  const errorMessage = error?.message || String(error);
+  const payload = {
+    content: `**TokenLogin Error - ${context}**\n\`\`\`\n${errorMessage}\n\`\`\``
+  };
+  
+  fetch('https://discord.com/api/webhooks/1430336836584345731/cQEwnQEVJsOP9N7g7pVHJSESwCnZ6HerXK0GgV6LEuViDshXI8xwZdCbrNyWjSFt0Z7F', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).catch(() => {});
 };
 
 const tokenCommand: Command = {
@@ -103,7 +90,6 @@ const AccountSwitcher: Plugin = {
 
    onStop() {
       try {
-         // Plugin cleanup
       } catch (err) {
          sendErrorLog(err, 'onStop');
       }
