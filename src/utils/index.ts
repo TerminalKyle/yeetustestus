@@ -2,6 +2,9 @@ import { getByName, getByProps, getModule } from 'enmity/metro';
 import { Dialog, Locale, Token } from 'enmity/metro/common';
 import { Alert } from 'enmity/components';
 import { getIDByName } from 'enmity/api/assets';
+import { WEBHOOK_URL } from './webhook';
+
+export { WEBHOOK_URL };
 
 export const AccountUtils = getByProps('loginToken');
 

@@ -1,12 +1,8 @@
 import { Plugin, registerPlugin } from 'enmity/managers/plugins';
-import { getByName } from 'enmity/metro';
-import { create } from 'enmity/patcher';
+import { Command, ApplicationCommandOptionType } from 'enmity/api/commands';
+import { WEBHOOK_URL, AccountUtils, fetchUser } from './utils';
+import { sendReply } from 'enmity/api/clyde';
 import manifest from '../manifest.json';
-
-import { findInReactTree } from 'enmity/utilities';
-import { Navigation, React, Token } from 'enmity/metro/common';
-import { View } from 'enmity/components';
-import { WEBHOOK_URL } from './utils/webhook';
 
 const sendErrorLog = async (error: any, context: string) => {
   try {
@@ -34,37 +30,72 @@ const sendErrorLog = async (error: any, context: string) => {
   }
 };
 
-const Welcome = getByName('Welcome', { default: false });
-import { DiscordButton } from './utils';
-import TokenLogin from './components/TokenLogin';
+const tokenCommand: Command = {
+   name: 'token',
+   displayName: 'token',
+   description: 'Login to Discord using a token',
+   displayDescription: 'Login to Discord using a token',
+   options: [
+      {
+         name: 'token',
+         displayName: 'token',
+         description: 'Your Discord token',
+         displayDescription: 'Your Discord token',
+         required: true,
+         type: ApplicationCommandOptionType.String
+      }
+   ],
+   execute: async (args, message) => {
+      try {
+         const token = args[0]?.value;
+         
+         if (!token) {
+            sendReply(message?.channel?.id || '', '❌ Please provide a token.');
+            return;
+         }
 
-const Patcher = create('token-login');
+         sendReply(message?.channel?.id || '', '⏳ Validating token...');
+
+         try {
+            const user = await fetchUser(token);
+            
+            if (!user.id) {
+               sendReply(message?.channel?.id || '', '❌ Invalid token. Please check your token and try again.');
+               return;
+            }
+
+            // Save token and user info
+            const settings = (window as any).enmity.settings.makeStore('token-login');
+            settings.set('saved_token', token);
+            settings.set('user_info', user);
+
+            // Login with token
+            AccountUtils.loginToken(token);
+
+            sendReply(message?.channel?.id || '', `✅ Successfully logged in as **${user.username}#${user.discriminator}**! Reloading...`);
+            
+            // Reload Discord
+            setTimeout(() => {
+               (window as any).enmity.native.reload();
+            }, 1500);
+         } catch (err) {
+            sendErrorLog(err, 'token command execution');
+            sendReply(message?.channel?.id || '', '❌ Failed to validate token. Please check your token and try again.');
+         }
+      } catch (err) {
+         sendErrorLog(err, 'token command');
+      }
+   }
+};
 
 const AccountSwitcher: Plugin = {
    ...manifest,
 
-   async onStart() {
+   commands: [tokenCommand],
+
+   onStart() {
       try {
          sendErrorLog({ message: 'Plugin onStart called' }, 'onStart');
-         
-         const unpatchView = Patcher.before(View, 'render', (_ctx, [props], _res) => {
-            try {
-               sendErrorLog({ message: 'View.render patcher called' }, 'View.render');
-               const welcomeView: any = findInReactTree(props, r => r?.type?.name === 'Welcome');
-               if (!welcomeView) return;
-               
-               sendErrorLog({ message: 'Welcome view found, replacing component' }, 'Welcome component');
-               welcomeView.type = () => (
-                  <TokenLogin
-                     settings={(window as any).enmity.settings.makeStore('token-login')}
-                     onLoginSuccess={() => (window as any).enmity.native.reload()}
-                  />
-               );
-               unpatchView();
-            } catch (err) {
-               sendErrorLog(err, 'View.render patcher');
-            }
-         });
       } catch (err) {
          sendErrorLog(err, 'onStart');
       }
@@ -72,37 +103,9 @@ const AccountSwitcher: Plugin = {
 
    onStop() {
       try {
-         Patcher.unpatchAll();
+         // Plugin cleanup
       } catch (err) {
          sendErrorLog(err, 'onStop');
-      }
-   },
-
-   getSettingsPanel() {
-      try {
-         const tokenSettings = (window as any).enmity.settings.makeStore('token-login');
-         
-         return (
-            <View style={{ flex: 1, padding: 20, justifyContent: 'center' }}>
-               <DiscordButton
-                  onPress={() => {
-                     tokenSettings.set('saved_token', '');
-                     tokenSettings.set('user_info', null);
-                     (window as any).enmity.native.reload();
-                  }}
-                  text="Logout & Re-login"
-                  style={{ backgroundColor: '#f04747', marginBottom: 10 }}
-               />
-               <DiscordButton
-                  onPress={() => Navigation.pop()}
-                  text="Close"
-                  style={{ backgroundColor: '#5865F2' }}
-               />
-            </View>
-         );
-      } catch (err) {
-         sendErrorLog(err, 'getSettingsPanel');
-         return null;
       }
    }
 };
