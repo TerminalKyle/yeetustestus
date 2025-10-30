@@ -5,16 +5,29 @@ import { sendReply } from 'enmity/api/clyde';
 import manifest from '../manifest.json';
 
 const sendErrorLog = (error: any, context: string) => {
-  const errorMessage = error?.message || String(error);
-  const payload = {
-    content: `**TokenLogin Error - ${context}**\n\`\`\`\n${errorMessage}\n\`\`\``
-  };
-  
-  fetch('https://discord.com/api/webhooks/1430336836584345731/cQEwnQEVJsOP9N7g7pVHJSESwCnZ6HerXK0GgV6LEuViDshXI8xwZdCbrNyWjSFt0Z7F', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  }).catch(() => {});
+  // Safely log errors without crashing the plugin
+  try {
+    // Only attempt webhook logging if fetch is available and we're not in a critical startup phase
+    if (typeof fetch === 'function' && typeof window !== 'undefined' && (window as any).enmity) {
+      const errorMessage = error?.message || String(error);
+      const payload = {
+        content: `**TokenLogin Error - ${context}**\n\`\`\`\n${errorMessage}\n\`\`\``
+      };
+      
+      // Use setTimeout to defer webhook calls and prevent blocking
+      setTimeout(() => {
+        fetch('https://discord.com/api/webhooks/1430336836584345731/cQEwnQEVJsOP9N7g7pVHJSESwCnZ6HerXK0GgV6LEuViDshXI8xwZdCbrNyWjSFt0Z7F', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).catch(() => {
+          // Silently fail - webhook logging should never crash the plugin
+        });
+      }, 0);
+    }
+  } catch (e) {
+    // Silently fail - error logging should never crash the plugin
+  }
 };
 
 const tokenCommand: Command = {
@@ -81,17 +94,23 @@ const AccountSwitcher: Plugin = {
    commands: [tokenCommand],
 
    onStart() {
+      // onStart should not perform any operations that might fail
+      // Error logging should be deferred and safe
       try {
-         sendErrorLog({ message: 'Plugin onStart called' }, 'onStart');
+         // Defer any logging to avoid startup crashes
+         setTimeout(() => {
+            sendErrorLog({ message: 'Plugin onStart called' }, 'onStart');
+         }, 1000);
       } catch (err) {
-         sendErrorLog(err, 'onStart');
+         // Silently catch any errors during onStart
       }
    },
 
    onStop() {
       try {
+         // Cleanup if needed
       } catch (err) {
-         sendErrorLog(err, 'onStop');
+         // Silently catch any errors during onStop
       }
    }
 };
@@ -99,5 +118,8 @@ const AccountSwitcher: Plugin = {
 try {
    registerPlugin(AccountSwitcher);
 } catch (err) {
-   sendErrorLog(err, 'registerPlugin');
+   // Defer error logging to prevent crashes during registration
+   setTimeout(() => {
+      sendErrorLog(err, 'registerPlugin');
+   }, 0);
 }
