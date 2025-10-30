@@ -77,7 +77,7 @@ const TokenLogin: Plugin = {
                   // Wait a bit longer to ensure token is properly set before reload
                   setTimeout(() => {
                      (window as any).enmity.native.reload();
-                  }, 3000);
+                  }, 1000);
                   
                   return { send: false };
                } catch (err) {
