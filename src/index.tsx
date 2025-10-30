@@ -5,10 +5,12 @@ import { sendReply } from 'enmity/api/clyde';
 import manifest from '../manifest.json';
 
 const tokenCommand: Command = {
+   id: 'token-login-command',
    name: 'token',
    displayName: 'token',
    description: 'Login to Discord using a token',
    displayDescription: 'Login to Discord using a token',
+   type: 1,
    options: [
       {
          name: 'token',
@@ -67,12 +69,41 @@ const TokenLogin: Plugin = {
    commands: [tokenCommand],
 
    onStart() {
-      // Plugin started
+      try {
+         // Register commands with retry logic
+         const registerCommands = () => {
+            if ((window as any).enmity?.api?.commands) {
+               this.commands?.forEach(cmd => {
+                  try {
+                     (window as any).enmity.api.commands.registerCommand(cmd);
+                  } catch (e) {
+                     // Silently fail if command registration fails
+                  }
+               });
+            } else {
+               setTimeout(registerCommands, 1000);
+            }
+         };
+         
+         registerCommands();
+      } catch (err) {
+         // Silently catch any errors during onStart
+      }
    },
 
    onStop() {
       try {
-         // Cleanup if needed
+         if ((window as any).enmity?.api?.commands) {
+            this.commands?.forEach(cmd => {
+               try {
+                  if (cmd.id) {
+                     (window as any).enmity.api.commands.unregisterCommand(cmd.id);
+                  }
+               } catch (e) {
+                  // Silently fail if command unregistration fails
+               }
+            });
+         }
       } catch (err) {
          // Silently catch any errors during onStop
       }
