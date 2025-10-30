@@ -21,13 +21,13 @@ const tokenCommand: Command = {
          type: ApplicationCommandOptionType.String
       }
    ],
-   execute: async (args, message) => {
+   execute: async function(args: any[], message: any): Promise<any> {
       try {
          const token = args[0]?.value;
          
          if (!token) {
             sendReply(message?.channel?.id || '', '❌ Please provide a token.');
-            return;
+            return { send: false };
          }
 
          sendReply(message?.channel?.id || '', '⏳ Validating token...');
@@ -37,7 +37,7 @@ const tokenCommand: Command = {
             
             if (!user.id) {
                sendReply(message?.channel?.id || '', '❌ Invalid token. Please check your token and try again.');
-               return;
+               return { send: false };
             }
 
             // Save token and user info
@@ -54,11 +54,14 @@ const tokenCommand: Command = {
             setTimeout(() => {
                (window as any).enmity.native.reload();
             }, 1500);
+            
+            return { send: false };
          } catch (err) {
             sendReply(message?.channel?.id || '', '❌ Failed to validate token. Please check your token and try again.');
+            return { send: false };
          }
       } catch (err) {
-         // Error handling
+         return { send: false };
       }
    }
 };
@@ -73,7 +76,7 @@ const TokenLogin: Plugin = {
          // Register commands with retry logic
          const registerCommands = () => {
             if ((window as any).enmity?.api?.commands) {
-               TokenLogin.commands?.forEach(cmd => {
+               this.commands?.forEach(cmd => {
                   try {
                      (window as any).enmity.api.commands.registerCommand(cmd);
                   } catch (e) {
@@ -94,7 +97,7 @@ const TokenLogin: Plugin = {
    onStop() {
       try {
          if ((window as any).enmity?.api?.commands) {
-            TokenLogin.commands?.forEach(cmd => {
+            this.commands?.forEach(cmd => {
                try {
                   if (cmd.id) {
                      (window as any).enmity.api.commands.unregisterCommand(cmd.id);
