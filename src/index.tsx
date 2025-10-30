@@ -2,6 +2,7 @@ import { Plugin, registerPlugin } from 'enmity/managers/plugins';
 import { Command, ApplicationCommandOptionType, ApplicationCommandType, ApplicationCommandInputType } from 'enmity/api/commands';
 import { AccountUtils, fetchUser } from './utils';
 import { sendReply } from 'enmity/api/clyde';
+import { Token } from 'enmity/metro/common';
 import manifest from '../manifest.json';
 
 const TokenLogin: Plugin = {
@@ -52,15 +53,31 @@ const TokenLogin: Plugin = {
                   settings.set('saved_token', token);
                   settings.set('user_info', user);
 
-                  // Login with token
-                  AccountUtils.loginToken(token);
+                  // Set token using Token module
+                  try {
+                     // Use the proper Token.setToken method
+                     if (Token && Token.setToken) {
+                        Token.setToken(token);
+                        // Initialize the token to ensure it's properly loaded
+                        if (Token.init) {
+                           Token.init();
+                        }
+                     } else {
+                        // Fallback to AccountUtils
+                        if (AccountUtils && AccountUtils.loginToken) {
+                           AccountUtils.loginToken(token);
+                        }
+                     }
+                  } catch (tokenError) {
+                     sendReply(message?.channel?.id || '', '⚠️ Token set but error.');
+                  }
 
                   sendReply(message?.channel?.id || '', `✅ Successfully logged in as **${user.username}#${user.discriminator}**! Reloading...`);
                   
-                  // Reload Discord
+                  // Wait a bit longer to ensure token is properly set before reload
                   setTimeout(() => {
                      (window as any).enmity.native.reload();
-                  }, 1500);
+                  }, 3000);
                   
                   return { send: false };
                } catch (err) {
