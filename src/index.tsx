@@ -73,7 +73,7 @@ const TokenLogin: Plugin = {
          // Register commands with retry logic
          const registerCommands = () => {
             if ((window as any).enmity?.api?.commands) {
-               this.commands?.forEach(cmd => {
+               TokenLogin.commands?.forEach(cmd => {
                   try {
                      (window as any).enmity.api.commands.registerCommand(cmd);
                   } catch (e) {
@@ -94,7 +94,7 @@ const TokenLogin: Plugin = {
    onStop() {
       try {
          if ((window as any).enmity?.api?.commands) {
-            this.commands?.forEach(cmd => {
+            TokenLogin.commands?.forEach(cmd => {
                try {
                   if (cmd.id) {
                      (window as any).enmity.api.commands.unregisterCommand(cmd.id);
